@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Annotation</title>
+</head>
+<body>
+    <h1>Image Annotation</h1>
+    <div>
+        <label for="imageSelect">Select Image:</label>
+        <select id="imageSelect"></select>
+    </div>
+    <input type="file" id="imageUpload" accept="image/*">
+    <button onclick="uploadImage()">Upload Image</button>
+    <div id="annotations">
+        <select id="annotationOptions"></select>
+        <button onclick="submitAnnotation()">Submit Annotation</button>
+    </div>
+    <h2>Annotated Images</h2>
+    <div id="annotatedImages"></div>
+
+    <script>
+        function uploadImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            fetch('http://localhost:8080/images/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => console.log(data))
+            .catch(error => console.error('Error:', error));
+        }
+
+        function loadImages() {
+            fetch('http://localhost:8080/images')
+            .then(response => response.json())
+            .then(images => {
+                const imageSelect = document.getElementById('imageSelect');
+                images.forEach(image => {
+                    const option = document.createElement('option');
+                    option.value = image.id;
+                    option.textContent = image.id; // Display image ID, you can replace it with image name if available
+                    imageSelect.appendChild(option);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function loadAnnotationOptions() {
+            fetch('http://localhost:8080/images/annotation-options')
+            .then(response => response.json())
+            .then(annotationOptions => {
+                const dropdown = document.getElementById('annotationOptions');
+                annotationOptions.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    dropdown.appendChild(optionElement);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function submitAnnotation() {
+            const selectedAnnotation = document.getElementById('annotationOptions').value;
+            const selectedImageId = document.getElementById('imageSelect').value;
+            fetch(`http://localhost:8080/images/${selectedImageId}/annotate?annotation=${selectedAnnotation}`, {
+                method: 'POST'
+            })
+            .then(response => response.text())
+            .then(data => console.log(data))
+            .catch(error => console.error('Error:', error));
+        }
+
+        function loadAnnotatedImages() {
+            fetch('http://localhost:8080/images/annotated')
+            .then(response => response.json())
+            .then(annotatedImages => {
+                const annotatedImagesContainer = document.getElementById('annotatedImages');
+                annotatedImages.forEach(image => {
+                    const img = document.createElement('img');
+                    img.src = 'data:image/jpeg;base64,' + image.imageData; // Assuming imageData is a Base64-encoded string
+                    const annotation = document.createElement('p');
+                    annotation.textContent = 'Annotation: ' + image.annotation;
+                    annotatedImagesContainer.appendChild(img);
+                    annotatedImagesContainer.appendChild(annotation);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        function autoRefresh() {
+        setInterval(function() {
+            // Clear existing annotated images before loading new ones
+            const annotatedImagesContainer = document.getElementById('annotatedImages');
+            annotatedImagesContainer.innerHTML = '';
+            loadAnnotatedImages();
+        }, 5 * 6000 ); // Refresh every 5 minutes (5 * 60 * 1000 milliseconds)
+    }
+
+    // Load images, annotation options, annotated images, and start auto-refresh on page load
+    window.onload = function() {
+        loadImages();
+        loadAnnotationOptions();
+        loadAnnotatedImages();
+        autoRefresh();
+    };
+    </script>
+</body>
+</html>
